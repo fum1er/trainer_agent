@@ -15,6 +15,17 @@ st.set_page_config(
 import os
 from src.database.database import get_db
 from src.database.models import User, UserProfile
+from src.database.auto_migrate import auto_migrate
+
+# Run auto-migrations on startup (safe to run multiple times)
+if "migrations_run" not in st.session_state:
+    try:
+        migrations = auto_migrate()
+        if migrations:
+            print(f"✓ Applied {len(migrations)} migrations: {migrations}")
+        st.session_state.migrations_run = True
+    except Exception as e:
+        print(f"Warning: Auto-migration failed: {e}")
 
 # Check if Strava was just connected via OAuth
 if os.path.exists("data/.strava_connected") and "user" not in st.session_state:

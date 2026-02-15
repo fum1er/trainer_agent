@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Strava
     strava_client_id: str
     strava_client_secret: str
-    strava_redirect_uri: str = "http://localhost:8501/strava_callback"
+    strava_redirect_uri: str = "http://localhost:8501/Analytics"
 
     # Database
     database_url: str = "sqlite:///data/trainer_agent.db"

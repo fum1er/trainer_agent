@@ -2,9 +2,9 @@
 Qdrant vector store for knowledge base
 """
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
 from config import settings
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import uuid
 
 
@@ -48,21 +48,34 @@ class QdrantVectorStore:
         self.client.upsert(collection_name=self.collection_name, points=points)
         print(f"OK: Upserted {len(points)} documents")
 
-    def search(self, query_embedding: List[float], limit: int = 5) -> List[Dict[str, Any]]:
+    def search(self, query_embedding: List[float], limit: int = 5, metadata_filter: Optional[Dict[str, str]] = None) -> List[Dict[str, Any]]:
         """
         Search for similar documents
 
         Args:
             query_embedding: Query vector
             limit: Number of results to return
+            metadata_filter: Optional filter on metadata fields, e.g. {"type": "workout"}
 
         Returns:
             List of results with text, metadata, and similarity score
         """
+        # Build Qdrant filter if metadata_filter is provided
+        qdrant_filter = None
+        if metadata_filter:
+            conditions = []
+            for key, value in metadata_filter.items():
+                conditions.append(FieldCondition(
+                    key=f"metadata.{key}",
+                    match=MatchValue(value=value)
+                ))
+            qdrant_filter = Filter(must=conditions)
+
         results = self.client.search(
             collection_name=self.collection_name,
             query_vector=query_embedding,
             limit=limit,
+            query_filter=qdrant_filter,
         )
 
         return [

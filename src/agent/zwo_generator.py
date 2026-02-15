@@ -35,7 +35,7 @@ class ZwoGenerator:
         # Add intervals
         for interval in intervals:
             if interval["type"] == "warmup":
-                ET.SubElement(
+                warmup_elem = ET.SubElement(
                     workout,
                     "Warmup",
                     Duration=str(interval["duration"]),
@@ -43,18 +43,24 @@ class ZwoGenerator:
                     PowerHigh=f"{interval['power_end']:.2f}",
                     pace="0"
                 )
+                # Add cadence if specified
+                if "cadence" in interval:
+                    warmup_elem.set("Cadence", str(interval["cadence"]))
 
             elif interval["type"] == "steadystate":
-                ET.SubElement(
+                steady_elem = ET.SubElement(
                     workout,
                     "SteadyState",
                     Duration=str(interval["duration"]),
                     Power=f"{interval['power']:.2f}",
                     pace="0"
                 )
+                # Add cadence if specified
+                if "cadence" in interval:
+                    steady_elem.set("Cadence", str(interval["cadence"]))
 
             elif interval["type"] == "intervals":
-                ET.SubElement(
+                interval_elem = ET.SubElement(
                     workout,
                     "IntervalsT",
                     Repeat=str(interval["repeat"]),
@@ -64,9 +70,17 @@ class ZwoGenerator:
                     OffPower=f"{interval['off_power']:.2f}",
                     pace="0"
                 )
+                # Add cadence if specified (can have different cadence for on/off)
+                if "cadence_on" in interval:
+                    interval_elem.set("Cadence", str(interval["cadence_on"]))
+                elif "cadence" in interval:
+                    interval_elem.set("Cadence", str(interval["cadence"]))
+
+                if "cadence_off" in interval:
+                    interval_elem.set("CadenceResting", str(interval["cadence_off"]))
 
             elif interval["type"] == "cooldown":
-                ET.SubElement(
+                cooldown_elem = ET.SubElement(
                     workout,
                     "Cooldown",
                     Duration=str(interval["duration"]),
@@ -74,6 +88,9 @@ class ZwoGenerator:
                     PowerHigh=f"{interval['power_end']:.2f}",
                     pace="0"
                 )
+                # Add cadence if specified
+                if "cadence" in interval:
+                    cooldown_elem.set("Cadence", str(interval["cadence"]))
 
         # Pretty print XML
         rough_string = ET.tostring(root, encoding='unicode')

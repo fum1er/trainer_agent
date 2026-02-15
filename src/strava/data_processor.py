@@ -33,12 +33,14 @@ class StravaDataProcessor:
             Enriched activity with calculated metrics
         """
         # Calculate NP from streams if available, otherwise use weighted_average_watts
-        normalized_power = activity.get("weighted_average_watts") or activity.get(
-            "average_watts", 0
-        )
-
         if streams and streams.get("watts"):
             normalized_power = self.metrics.calculate_normalized_power(streams["watts"])
+        else:
+            # Fallback to weighted average or average watts
+            normalized_power = activity.get("weighted_average_watts") or activity.get("average_watts")
+            # Convert None to 0.0
+            if normalized_power is None:
+                normalized_power = 0.0
 
         # Calculate IF and TSS
         intensity_factor = self.metrics.calculate_intensity_factor(normalized_power, self.ftp)
@@ -83,10 +85,15 @@ class StravaDataProcessor:
         """
         processed_activities = []
 
-        for activity in activities:
+        for i, activity in enumerate(activities):
             streams = None
             if fetch_streams and client:
                 streams = client.get_activity_streams(activity["id"])
+                # Rate limiting: Strava allows 100 requests per 15min, 1000 per day
+                # Sleep 0.2s between stream requests (max 300 per minute = 5 per second)
+                if i < len(activities) - 1:  # Don't sleep after last activity
+                    import time
+                    time.sleep(0.2)
 
             processed = self.process_activity(activity, streams)
             processed_activities.append(processed)

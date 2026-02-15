@@ -52,7 +52,7 @@ class TrainingMetrics:
         Returns:
             Intensity Factor
         """
-        if ftp == 0:
+        if not normalized_power or ftp == 0:
             return 0.0
         return normalized_power / ftp
 
@@ -74,7 +74,7 @@ class TrainingMetrics:
         Returns:
             Training Stress Score
         """
-        if ftp == 0:
+        if not normalized_power or not intensity_factor or ftp == 0:
             return 0.0
 
         tss = (duration_seconds * normalized_power * intensity_factor) / (ftp * 3600) * 100

@@ -38,13 +38,15 @@ class KnowledgeBase:
         # Store in Qdrant
         self.vector_store.upsert_documents(documents, embeddings)
 
-    def query(self, question: str, limit: int = 5) -> List[Dict[str, Any]]:
+    def query(self, question: str, limit: int = 5, score_threshold: float = 0.0, metadata_filter: dict = None) -> List[Dict[str, Any]]:
         """
         Query the knowledge base
 
         Args:
             question: User question
             limit: Number of results to return
+            score_threshold: Minimum similarity score (0.0-1.0), 0.0 = no filtering
+            metadata_filter: Optional filter on metadata fields, e.g. {"type": "workout"}
 
         Returns:
             List of relevant passages with metadata and scores
@@ -53,6 +55,10 @@ class KnowledgeBase:
         query_embedding = self.embedder.generate(question)
 
         # Search in vector store
-        results = self.vector_store.search(query_embedding, limit=limit)
+        results = self.vector_store.search(query_embedding, limit=limit, metadata_filter=metadata_filter)
+
+        # Filter by score threshold
+        if score_threshold > 0:
+            results = [r for r in results if r.get("score", 0) >= score_threshold]
 
         return results
