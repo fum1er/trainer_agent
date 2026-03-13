@@ -1,9 +1,12 @@
 """
 Bridge between PlanAgent and WorkoutAgent for generating planned workouts
 """
+import logging
 from src.agent.workout_agent import WorkoutAgent
 from src.database.models import PlannedWorkout, WorkoutPlan
 from typing import Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 def generate_planned_workout(
@@ -11,6 +14,7 @@ def generate_planned_workout(
     user_profile: Dict,
     training_history: List,
     feedback_history: List,
+    agent: WorkoutAgent = None,
 ) -> Dict:
     """
     Generate a workout from a PlannedWorkout slot using WorkoutAgent.
@@ -23,6 +27,7 @@ def generate_planned_workout(
         user_profile: Dict with FTP, CTL, ATL, TSB
         training_history: List of recent Activity dicts
         feedback_history: List of WorkoutFeedback dicts (type-aware)
+        agent: Optional pre-initialized WorkoutAgent (for batch reuse)
 
     Returns:
         Dict with workout_xml, reasoning, structure (from WorkoutAgent)
@@ -44,8 +49,9 @@ Please design a workout that matches these constraints as closely as possible.
         "target_workout_type": planned_workout.workout_type,
     }
 
-    # Initialize WorkoutAgent and generate
-    agent = WorkoutAgent()
+    if agent is None:
+        agent = WorkoutAgent()
+
     result = agent.generate_workout(
         user_input=user_input,
         user_profile=profile_with_context,
@@ -137,18 +143,19 @@ def batch_generate_week_workouts(
         List of dicts with workout_xml, reasoning, structure, validation
     """
     results = []
+    # Create a single agent instance for the entire batch
+    agent = WorkoutAgent()
 
     for planned_workout in planned_workouts:
         try:
-            # Generate workout
             result = generate_planned_workout(
                 planned_workout=planned_workout,
                 user_profile=user_profile,
                 training_history=training_history,
                 feedback_history=feedback_history,
+                agent=agent,
             )
 
-            # Validate constraints
             validation = validate_workout_constraints(result, planned_workout)
 
             if fail_on_validation and not validation["is_valid"]:
@@ -157,8 +164,8 @@ def batch_generate_week_workouts(
             result["validation"] = validation
             results.append(result)
 
-        except Exception as e:
-            print(f"Failed to generate workout {planned_workout.id}: {e}")
+        except (ValueError, KeyError, RuntimeError) as e:
+            logger.error("Failed to generate workout %s: %s", planned_workout.id, e, exc_info=True)
             results.append({
                 "error": str(e),
                 "planned_workout_id": planned_workout.id,

@@ -102,23 +102,22 @@ class TrainingMetrics:
         Returns:
             Dict with time_zone1 through time_zone7 (seconds)
         """
-        zones = {
-            "zone1": (0, 0.55 * ftp),
-            "zone2": (0.55 * ftp, 0.75 * ftp),
-            "zone3": (0.75 * ftp, 0.90 * ftp),
-            "zone4": (0.90 * ftp, 1.05 * ftp),
-            "zone5": (1.05 * ftp, 1.20 * ftp),
-            "zone6": (1.20 * ftp, 1.50 * ftp),
-            "zone7": (1.50 * ftp, float("inf")),
-        }
+        # Zone boundaries (upper edges, exclusive); zone index = np.digitize result
+        boundaries = [
+            0.55 * ftp,   # Z1 < 55%
+            0.75 * ftp,   # Z2 55-75%
+            0.90 * ftp,   # Z3 75-90%
+            1.05 * ftp,   # Z4 90-105%
+            1.20 * ftp,   # Z5 105-120%
+            1.50 * ftp,   # Z6 120-150%
+        ]                 # Z7 > 150%
 
-        distribution = {f"time_{zone}": 0 for zone in zones.keys()}
+        watts_arr = np.asarray(watts)
+        zone_indices = np.digitize(watts_arr, boundaries)  # returns 0-6 (maps to Z1-Z7)
 
-        for watt in watts:
-            for zone_name, (lower, upper) in zones.items():
-                if lower <= watt < upper:
-                    distribution[f"time_{zone_name}"] += 1  # 1 second per sample
-                    break
+        distribution = {f"time_zone{z}": 0 for z in range(1, 8)}
+        for idx in range(7):
+            distribution[f"time_zone{idx + 1}"] = int(np.sum(zone_indices == idx))
 
         return distribution
 

@@ -24,7 +24,13 @@ class Settings(BaseSettings):
     # Strava
     strava_client_id: str
     strava_client_secret: str
-    strava_redirect_uri: str = "http://localhost:8501/Analytics"
+    # In production, set STRAVA_REDIRECT_URI=https://your-app.streamlit.app/Dashboard
+    strava_redirect_uri: str = "http://localhost:8501/Dashboard"
+
+    # TrainingPeaks
+    trainingpeaks_client_id: Optional[str] = None
+    trainingpeaks_client_secret: Optional[str] = None
+    trainingpeaks_redirect_uri: str = "http://localhost:8501/Dashboard"
 
     # Database
     database_url: str = "sqlite:///data/trainer_agent.db"

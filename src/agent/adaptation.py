@@ -1,6 +1,7 @@
 """
 Adaptation Engine for training program adjustments based on actual performance
 """
+import json
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 
@@ -208,8 +209,6 @@ class AdaptationEngine:
         Returns:
             bool: True if a recovery week is recommended
         """
-        import json
-
         macro_plan = json.loads(program.macro_plan_json)
         week_targets = macro_plan.get("week_targets", [])
 
@@ -252,22 +251,18 @@ class AdaptationEngine:
         """
         tsb = current_profile.get("tsb", 0)
 
-        # Distribution strategy based on TSB and session count
-        if sessions_per_week == 3:
-            # 3 sessions: 1 hard, 1 moderate, 1 easy
-            ratios = [0.40, 0.35, 0.25]  # Hard, moderate, easy
-        elif sessions_per_week == 4:
-            # 4 sessions: 2 hard, 1 moderate, 1 easy
-            ratios = [0.35, 0.30, 0.20, 0.15]
-        elif sessions_per_week == 5:
-            # 5 sessions: 2 hard, 2 moderate, 1 easy
-            ratios = [0.30, 0.25, 0.20, 0.15, 0.10]
-        elif sessions_per_week >= 6:
-            # 6+ sessions: 2 hard, 2 moderate, 2+ easy
-            ratios = [0.25, 0.20, 0.18, 0.15, 0.12, 0.10]
-        else:
-            # Fallback: equal distribution
-            ratios = [1.0 / sessions_per_week] * sessions_per_week
+        # Distribution strategy: hard-easy-hard sequencing, ratios sum to 1.0
+        _ratios_by_sessions = {
+            3: [0.40, 0.35, 0.25],
+            4: [0.35, 0.30, 0.20, 0.15],
+            5: [0.30, 0.25, 0.20, 0.15, 0.10],
+            6: [0.25, 0.20, 0.18, 0.15, 0.12, 0.10],
+            7: [0.22, 0.18, 0.16, 0.14, 0.12, 0.10, 0.08],
+        }
+        ratios = _ratios_by_sessions.get(
+            sessions_per_week,
+            [1.0 / sessions_per_week] * sessions_per_week,
+        )
 
         # Assign workout types based on zone_focus and TSS ratios
         workouts = []

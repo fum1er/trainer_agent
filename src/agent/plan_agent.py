@@ -731,6 +731,7 @@ Current rider state: FTP={profile.get('ftp', 0)}W, CTL={profile.get('ctl', 0):.0
         week_number: int,
         user_profile: dict,
         recent_weeks: list,  # List of WeekPlan instances
+        user_override: str = "",  # Optional user feedback to influence week planning
     ) -> dict:
         """
         Re-plan a specific week with adaptation.
@@ -749,7 +750,7 @@ Current rider state: FTP={profile.get('ftp', 0)}W, CTL={profile.get('ctl', 0):.0
         # Build simplified state for nodes 5-6 only
         state = PlanState(
             messages=[],
-            user_input="",
+            user_input=user_override or "",
             user_profile=user_profile,
             training_history=[],
             user_feedback_history=[],

@@ -10,13 +10,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.database.database import get_db
 from src.database.models import WorkoutPlan, WorkoutFeedback
+from src.utils.session_init import init_session
 from datetime import datetime
+
+init_session()
 
 st.title("Workout Library")
 
-# Check if user is logged in
 if "user" not in st.session_state:
-    st.warning("Please connect your Strava account first!")
+    st.warning("Please connect your Strava account from the Dashboard first!")
     st.stop()
 
 st.markdown("---")

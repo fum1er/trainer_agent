@@ -37,18 +37,42 @@ class StravaAuth:
             code: Authorization code from OAuth callback
 
         Returns:
-            Dict with access_token, refresh_token, expires_at
+            Dict with access_token, refresh_token, expires_at, strava_id, athlete_name
         """
         client = Client()
         token_response = client.exchange_code_for_token(
             client_id=self.client_id, client_secret=self.client_secret, code=code
         )
 
-        return {
+        result = {
             "access_token": token_response["access_token"],
             "refresh_token": token_response["refresh_token"],
             "expires_at": datetime.fromtimestamp(token_response["expires_at"]),
         }
+
+        # Extract athlete info — stravalib includes it in the initial token response
+        athlete = token_response.get("athlete")
+        if athlete:
+            # athlete is a raw dict from the Strava API response
+            aid = athlete.get("id") if isinstance(athlete, dict) else getattr(athlete, "id", None)
+            fname = athlete.get("firstname", "") if isinstance(athlete, dict) else getattr(athlete, "firstname", "")
+            lname = athlete.get("lastname", "") if isinstance(athlete, dict) else getattr(athlete, "lastname", "")
+            result["strava_id"] = str(aid) if aid else None
+            result["athlete_name"] = f"{fname} {lname}".strip() or "Cyclist"
+        else:
+            # Fallback: explicit API call with credentials set to suppress warnings
+            try:
+                client.client_id = self.client_id
+                client.client_secret = self.client_secret
+                client.access_token = token_response["access_token"]
+                athlete_obj = client.get_athlete()
+                result["strava_id"] = str(athlete_obj.id)
+                result["athlete_name"] = f"{athlete_obj.firstname} {athlete_obj.lastname}".strip() or "Cyclist"
+            except Exception:
+                result["strava_id"] = None
+                result["athlete_name"] = "Cyclist"
+
+        return result
 
     def refresh_access_token(self, refresh_token: str) -> dict:
         """

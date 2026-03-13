@@ -1,6 +1,7 @@
 """
 LangGraph Agent for Workout Generation - Expert Cycling Coach
 """
+from concurrent.futures import ThreadPoolExecutor
 from typing import TypedDict, Annotated, Sequence, Literal, Optional
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
@@ -374,25 +375,13 @@ Summarize in 2-3 bullet points:
         queries = self._build_rag_queries(user_input, target_type, tsb)
 
         # ==========================================
-        # PIPELINE 1: BOOKS (training science theory)
-        # Filter: exclude workouts, only books/PDFs
+        # Build workout queries (needed before parallel launch)
         # ==========================================
         book_queries = queries  # All queries apply to books
-        book_results = self._run_rag_pipeline(
-            book_queries, score_threshold=0.50, top_n=8,
-            metadata_filter={"type": "book"}
-        )
-
-        # ==========================================
-        # PIPELINE 2: ZWIFT WORKOUTS (proven structures)
-        # Filter: only workouts
-        # Queries focused on practical structures
-        # ==========================================
         workout_queries = []
         if target_type:
             workout_queries.append(f"{target_type} cycling workout intervals structure")
             workout_queries.append(f"{target_type} {user_input}")
-            # Add type-specific workout queries
             workout_enrichment = {
                 "Sweet Spot": "sweet spot 88-94% FTP over-under progressive intervals",
                 "VO2max": "VO2max high intensity short intervals 3-5 minutes 110-120% FTP",
@@ -407,10 +396,18 @@ Summarize in 2-3 bullet points:
         else:
             workout_queries.append(f"cycling workout {user_input}")
 
-        workout_results = self._run_rag_pipeline(
-            workout_queries, score_threshold=0.50, top_n=5,
-            metadata_filter={"type": "workout"}
-        )
+        # ==========================================
+        # PIPELINE 1 + 2 run in parallel (independent Qdrant queries)
+        # ==========================================
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_books = executor.submit(
+                self._run_rag_pipeline, book_queries, 0.50, 8, {"type": "book"}
+            )
+            future_workouts = executor.submit(
+                self._run_rag_pipeline, workout_queries, 0.50, 5, {"type": "workout"}
+            )
+            book_results = future_books.result()
+            workout_results = future_workouts.result()
 
         # ==========================================
         # BUILD CONTEXT: books first, then workouts

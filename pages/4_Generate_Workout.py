@@ -12,7 +12,10 @@ from src.agent.workout_agent import WorkoutAgent, safe_parse_number
 from src.database.database import get_db
 from src.database.models import Activity, WorkoutPlan, WorkoutFeedback
 from src.visualization.charts import create_workout_profile_chart
+from src.utils.session_init import init_session
 from datetime import datetime, timedelta
+
+init_session()
 
 st.title("Generate Workout")
 
@@ -51,12 +54,9 @@ def _infer_workout_type(workout_request: str, focus_area: str) -> str:
     return ""  # Unknown
 
 
-# Check if user is logged in
 if "user" not in st.session_state:
-    st.warning("Please connect your Strava account first!")
+    st.warning("Please connect your Strava account from the Dashboard first!")
     st.stop()
-
-# Check if profile exists
 if "profile" not in st.session_state or not st.session_state.profile.get("ftp"):
     st.warning("Please set your FTP in the Settings page first!")
     st.stop()
